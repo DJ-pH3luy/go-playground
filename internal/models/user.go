@@ -4,7 +4,7 @@ import (
 	"html"
 	"strings"
 
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 	"golang.org/x/crypto/bcrypt"
 )
 

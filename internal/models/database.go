@@ -5,9 +5,9 @@ import (
 	"log"
 	"os"
 	
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"github.com/joho/godotenv"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 var Database *gorm.DB
@@ -20,22 +20,20 @@ func ConnectDataBase(){
 	  log.Fatalf("Error loading .env file")
 	}	
 	
-	DbDriver := os.Getenv("DB_DRIVER")
-	DbHost := os.Getenv("DB_HOST")
-	DbUser := os.Getenv("DB_USER")
-	DbPassword := os.Getenv("DB_PASSWORD")
-	DbName := os.Getenv("DB_NAME")
-	DbPort := os.Getenv("DB_PORT")
-
-	DbUrl := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8&parseTime=True&loc=Local", DbUser, DbPassword, DbHost, DbPort, DbName)
+	dbHost := os.Getenv("DB_HOST")
+	dbUser := os.Getenv("DB_USER")
+	dbPassword := os.Getenv("DB_PASSWORD")
+	dbName := os.Getenv("DB_NAME")
+	dbPort := os.Getenv("DB_PORT")
 	
-	Database, err = gorm.Open(DbDriver, DbUrl)
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=UTC", dbHost, dbUser, dbPassword, dbName, dbPort)
+	Database, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 
 	if err != nil {
-		fmt.Println("Cannot connect to database ", DbDriver)
+		fmt.Println("Cannot connect to database ")
 		log.Fatal("connection error:", err)
 	} else {
-		fmt.Println("Connected to the database ", DbDriver)
+		fmt.Println("Connected to the database ")
 	}
 
 	Database.AutoMigrate(&User{})
