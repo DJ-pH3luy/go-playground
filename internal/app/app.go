@@ -21,6 +21,7 @@ func registerControllers(r *gin.Engine) {
 	controllers := []controllers.IController{
 		&controllers.BasicController{},
 		&controllers.UserController{},
+		&controllers.LoginController{},
 	}
 	for _,controller := range controllers {
 		controller.RegisterRoutes(r)

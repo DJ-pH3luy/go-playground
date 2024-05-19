@@ -13,12 +13,14 @@ type User struct {
 	Username string `gorm:"size:255;not null;unique" json:"username"`
 	Email string `gorm:"size:255;not null;unique" json:"email"`
 	Password string `gorm:"size:255;not null;" json:"password"`
+	IsAdmin bool `gorm:"not null;default:false" json:"isAdmin"`
 }
 
 type UserViewModel struct {
 	Id uint `json:"id"`
 	Username string `json:"username"`
 	Email string `json:"email"`
+	IsAdmin bool `json:"isAdmin"`
 }
 
 func GetUser(id string) (UserViewModel, error) {
@@ -27,7 +29,7 @@ func GetUser(id string) (UserViewModel, error) {
 	if err != nil {
 		return UserViewModel{}, err
 	}
-	return user.mapToView(), err
+	return user.MapToView(), err
 }
 
 func GetUsers() ([]UserViewModel, error) {
@@ -38,9 +40,17 @@ func GetUsers() ([]UserViewModel, error) {
 		return viewModelUsers, err
 	}
 	for _,user := range users {
-	viewModelUsers = append(viewModelUsers, user.mapToView())
+	viewModelUsers = append(viewModelUsers, user.MapToView())
 	}
 	return viewModelUsers, nil
+}
+
+func (u *User) Update() error {
+	err := u.beforeSave()
+	if err != nil {
+		return err;
+	}
+	return Database.Updates(&u).Error
 }
 
 func (u *User) Save() error {
@@ -63,11 +73,11 @@ func CheckLogin(username string, password string) (UserViewModel, error) {
 		return UserViewModel{}, err
 	}
 
-	return user.mapToView(), nil	
+	return user.MapToView(), nil	
 }
 
-func (u *User) mapToView() UserViewModel{
-	return UserViewModel{Id: u.ID, Username: u.Username, Email: u.Email}
+func (u *User) MapToView() UserViewModel{
+	return UserViewModel{Id: u.ID, Username: u.Username, Email: u.Email, IsAdmin: u.IsAdmin}
 }
 
 func (u *User) beforeSave() error {
