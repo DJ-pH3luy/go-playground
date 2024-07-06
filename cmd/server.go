@@ -1,4 +1,4 @@
-package app
+package main
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func StartApp() {
+func main(){
 	fmt.Println("starting app ...")
 	models.ConnectDataBase()
 	router := gin.Default()
@@ -19,7 +19,6 @@ func StartApp() {
 
 func registerControllers(r *gin.Engine) {
 	controllers := []controllers.IController{
-		&controllers.BasicController{},
 		&controllers.UserController{},
 		&controllers.LoginController{},
 	}

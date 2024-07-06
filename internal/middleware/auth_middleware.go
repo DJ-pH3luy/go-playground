@@ -11,7 +11,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var Secret = []byte("some_secret") // TODO: config setup
+var Secret = []byte("some_secret") //  TODO use viper for config
 
 
 type CustomClaims struct {
@@ -38,14 +38,12 @@ func BasicAuthMiddleware() gin.HandlerFunc {
 func basicAuthProcedure(ctx *gin.Context) {
 	username, password, ok := ctx.Request.BasicAuth()
 	if !ok {
-		ctx.String(http.StatusUnauthorized, "Authorization header required")
-		ctx.Abort()
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "authorization is required"})
 		return
 	}
 	user, err := models.CheckLogin(username, password)
 	if err != nil {
-		ctx.String(http.StatusUnauthorized, "Password or username incorrect")
-		ctx.Abort()
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "username or password incorrect"})
 		return
 	}
 	ctx.Set("user", user)
@@ -60,47 +58,36 @@ func TokenAuthMiddleware() gin.HandlerFunc {
 
 func tokenAuthProcedure(ctx *gin.Context) {
 	authHeader := ctx.Request.Header.Get("Authorization");
-	if authHeader == "" {
-		ctx.String(http.StatusUnauthorized, "Authorization header is required")
-		ctx.Abort()
+	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer "){
+		ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "authorization is required"})
 		return
 	}
-	if !strings.HasPrefix(authHeader, "Bearer ") {
-		ctx.String(http.StatusUnauthorized, "Bearer token is required")
-		ctx.Abort()
-		return
-	}
-
+	
 	token, err := verifyToken(authHeader[len("Bearer "):])
 	switch {
 		case token.Valid:
 			claims, ok := token.Claims.(*CustomClaims)
 			if !ok {
-				ctx.String(http.StatusUnauthorized, "Could not parse claims")
-				ctx.Abort()
+				ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "could not parse token"})
 				return
 			}
 			ctx.Set("user", claims.User)
 			ctx.Next()
 
 		case errors.Is(err, jwt.ErrTokenMalformed):
-			ctx.String(http.StatusUnauthorized, "Could not parse token")
-			ctx.Abort()
+			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "could not parse token"})
 			return
 
 		case errors.Is(err, jwt.ErrTokenSignatureInvalid):
-			ctx.String(http.StatusUnauthorized, "Could not verify token")
-			ctx.Abort()
+			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "could not verify token"})
 			return
 
 		case errors.Is(err, jwt.ErrTokenExpired) || errors.Is(err, jwt.ErrTokenNotValidYet):
-			ctx.String(http.StatusUnauthorized, "Token expired")
-			ctx.Abort()
+			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "token expired"})
 			return
 
 		default:
-			ctx.String(http.StatusUnauthorized, "Could not authorize")
-			ctx.Abort()
+			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "could not authorize"})
 			return
 	}
 }
