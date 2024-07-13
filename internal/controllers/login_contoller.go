@@ -5,12 +5,14 @@ import (
 	"time"
 
 	"github.com/dj-ph3luy/go-playground/internal/middleware"
-	"github.com/dj-ph3luy/go-playground/internal/models"
+	"github.com/dj-ph3luy/go-playground/internal/services"
+	"github.com/dj-ph3luy/go-playground/internal/views"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
 
 type LoginController struct {
+	Service services.IUserService
 }
 
 type LoginInput struct {
@@ -30,13 +32,13 @@ func (c *LoginController) loginHandler(ctx *gin.Context) {
 		return
 	}
 
-	user, err := models.CheckLogin(input.Username, input.Password)
+	user, err := c.Service.Login(ctx, input.Username, input.Password)
 	if err != nil {
 		ctx.JSON(http.StatusUnauthorized, gin.H{"message": "login failed", "error": "password or username incorrect"})
 		return
 	}
 
-	tokenString, err := generateJWT(user)
+	tokenString, err := generateJWT(user.ToView())
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"message": "login failed", "error": err.Error()})
 		return
@@ -45,7 +47,7 @@ func (c *LoginController) loginHandler(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, gin.H{"token": tokenString})
 }
 
-func generateJWT(user models.UserViewModel) (string, error) {
+func generateJWT(user views.User) (string, error) {
 	expirationTime := time.Now().Add(5 * time.Minute)
 	claims := &middleware.CustomClaims{
 		User: user,

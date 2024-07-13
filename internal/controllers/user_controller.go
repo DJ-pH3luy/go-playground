@@ -3,23 +3,26 @@ package controllers
 import (
 	"net/http"
 
+	"github.com/dj-ph3luy/go-playground/internal/dto"
 	"github.com/dj-ph3luy/go-playground/internal/middleware"
-	"github.com/dj-ph3luy/go-playground/internal/models"
+	"github.com/dj-ph3luy/go-playground/internal/services"
+	"github.com/dj-ph3luy/go-playground/internal/views"
 	"github.com/gin-gonic/gin"
 )
 
 type UserController struct {
+	Service services.IUserService
 }
 
-type RegisterUserInput struct {
-	Username string `json:"username" binding:"required"`
-	Email    string `json:"email" binding:"required"`
-	Password string `json:"password" binding:"required"`
-}
+// type RegisterUserInput struct {
+// 	Username string `json:"username" binding:"required"`
+// 	Email    string `json:"email" binding:"required"`
+// 	Password string `json:"password" binding:"required"`
+// }
 
-type UpdateUserPasswordInput struct {
-	Password string `json:"password" binding:"required"`
-}
+// type UpdateUserPasswordInput struct {
+// 	Password string `json:"password" binding:"required"`
+// }
 
 func (c *UserController) RegisterRoutes(router *gin.Engine) {
 	userGroup := router.Group("v1/user")
@@ -34,12 +37,12 @@ func (c *UserController) RegisterRoutes(router *gin.Engine) {
 
 func (c *UserController) getUser(ctx *gin.Context) {
 	id := ctx.Param("id")
-	user, err := models.GetUser(id)
+	user, err := c.Service.GetById(ctx, id)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"message": "could get user", "error": err.Error()})
 		return
 	}
-	if user.Username != loggedInUser(ctx).Username && !loggedInUser(ctx).IsAdmin {
+	if user.Name != loggedInUser(ctx).Name && !loggedInUser(ctx).IsAdmin {
 		ctx.JSON(http.StatusForbidden, gin.H{"message": "forbidden"})
 		return
 	}
@@ -47,7 +50,7 @@ func (c *UserController) getUser(ctx *gin.Context) {
 }
 
 func (c *UserController) getUsers(ctx *gin.Context) {
-	users, err := models.GetUsers()
+	users, err := c.Service.GetAll(ctx)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"message": "could not get users", "error": err.Error()})
 		return
@@ -60,66 +63,44 @@ func (c *UserController) getUsers(ctx *gin.Context) {
 }
 
 func (c *UserController) registerHandler(ctx *gin.Context) {
-	var input RegisterUserInput
+	var input dto.CreateUser
 
 	if err := ctx.ShouldBindJSON(&input); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"message": "bad request", "error": err.Error()})
 		return
 	}
 
-	user := models.User{}
-
-	user.Username = input.Username
-	user.Email = input.Email
-	user.Password = input.Password
-
-	err := user.Save()
+	id, err := c.Service.Create(ctx, input)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"message": "could not save user", "error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"message": "bad request", "error": err.Error()})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"message": "registration success", "user": user.MapToView()})
+	ctx.JSON(http.StatusOK, gin.H{"message": "registration success", "id": id})
 }
 
 func (c *UserController) updateUserPassword(ctx *gin.Context) {
-	var input UpdateUserPasswordInput
+	var input dto.UpdateUser
 
 	if err := ctx.ShouldBindJSON(&input); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"message": "bad request", "error": err.Error()})
 		return
 	}
-	id := ctx.Param("id")
-	user, err := models.GetUser(id)
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"message": "could not get user", "error": err.Error()})
-		return
-	}
-	if user.Username != loggedInUser(ctx).Username {
-		ctx.JSON(http.StatusForbidden, gin.H{"message": "you can only change your own password"})
-		return
-	}
 
-	updatedUser := models.User{
-		Username: user.Username,
-		Email:    user.Email,
-		Password: input.Password,
-		IsAdmin:  user.IsAdmin,
-	}
-	updatedUser.ID = user.Id
-	err = updatedUser.Update()
+	input.Id = ctx.Param("id")
+	id, err := c.Service.Update(ctx, input)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"message": "could not update user", "error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"message": "updated user", "user": updatedUser.MapToView()})
+	ctx.JSON(http.StatusOK, gin.H{"message": "updated user", "id": id})
 }
 
 // loggedInUser returns the currently logged in user from the context
-func loggedInUser(ctx *gin.Context) models.UserViewModel {
+func loggedInUser(ctx *gin.Context) views.User {
 	user, ok := ctx.Get("user")
 	if !ok {
-		return models.UserViewModel{}
+		return views.User{}
 	}
-	return user.(models.UserViewModel)
+	return user.(views.User)
 }
