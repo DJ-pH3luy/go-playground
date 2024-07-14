@@ -16,11 +16,6 @@ var UserService services.IUserService
 
 var Secret = []byte("some_secret") //  TODO use viper for config
 
-type CustomClaims struct {
-	User views.User `json:"user"`
-	jwt.RegisteredClaims
-}
-
 func TokenOrBasicAuthMiddleware() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		if _, _, ok := ctx.Request.BasicAuth(); ok {
@@ -68,7 +63,7 @@ func tokenAuthProcedure(ctx *gin.Context) {
 	token, err := verifyToken(authHeader[len("Bearer "):])
 	switch {
 	case token.Valid:
-		claims, ok := token.Claims.(*CustomClaims)
+		claims, ok := token.Claims.(*views.UserClaims)
 		if !ok {
 			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "could not parse token"})
 			return
@@ -95,7 +90,7 @@ func tokenAuthProcedure(ctx *gin.Context) {
 }
 
 func verifyToken(tokenString string) (*jwt.Token, error) {
-	return jwt.ParseWithClaims(tokenString, &CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
+	return jwt.ParseWithClaims(tokenString, &views.UserClaims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}

@@ -2,13 +2,9 @@ package controllers
 
 import (
 	"net/http"
-	"time"
 
-	"github.com/dj-ph3luy/go-playground/internal/middleware"
 	"github.com/dj-ph3luy/go-playground/internal/services"
-	"github.com/dj-ph3luy/go-playground/internal/views"
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 )
 
 type LoginController struct {
@@ -38,25 +34,11 @@ func (c *LoginController) loginHandler(ctx *gin.Context) {
 		return
 	}
 
-	tokenString, err := generateJWT(user.ToView())
+	tokenString, err := c.Service.GenerateJWT(user.ToView())
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"message": "login failed", "error": err.Error()})
 		return
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"token": tokenString})
-}
-
-func generateJWT(user views.User) (string, error) {
-	expirationTime := time.Now().Add(5 * time.Minute)
-	claims := &middleware.CustomClaims{
-		User: user,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(expirationTime),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-		},
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(middleware.Secret)
 }

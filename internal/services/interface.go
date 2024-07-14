@@ -5,6 +5,7 @@ import (
 
 	"github.com/dj-ph3luy/go-playground/internal/dto"
 	"github.com/dj-ph3luy/go-playground/internal/entities"
+	"github.com/dj-ph3luy/go-playground/internal/views"
 )
 	
 
@@ -15,4 +16,5 @@ type IUserService interface {
 	GetAll(ctx context.Context) ([]entities.User, error)
 	GetById(ctx context.Context, id string) (entities.User, error)
 	GetByName(ctx context.Context, name string) (entities.User, error) 
+	GenerateJWT(user views.User) (string, error)
 }
